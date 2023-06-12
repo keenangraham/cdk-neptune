@@ -4,6 +4,8 @@ from aws_cdk import Duration
 from aws_cdk import Environment
 from aws_cdk import Stack
 
+from aws_cdk.aws_neptune_alpha import DatabaseCluster
+
 from constructs import Construct
 
 

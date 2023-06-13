@@ -8,6 +8,8 @@ from aws_cdk import RemovalPolicy
 from aws_cdk.aws_neptune_alpha import DatabaseCluster
 from aws_cdk.aws_neptune_alpha import InstanceType
 
+from aws_cdk.aws_ec2 import BastionHostLinux
+from aws_cdk.aws_ec2 import InstanceType as Ec2InstanceType
 from aws_cdk.aws_ec2 import SubnetSelection
 from aws_cdk.aws_ec2 import SubnetType
 
@@ -46,6 +48,16 @@ class NeptuneStack(Stack):
 
         write_address = cluster.cluster_endpoint.socket_address
         read_address = cluster.cluster_read_endpoint.socket_address
+
+        bastion_host = BastionHostLinux(
+            self,
+            'NeptuneBastionHost',
+            instance_type=Ec2InstanceType('t3.nano'),
+            vpc=vpcs.default_vpc,
+            subnet_selection=SubnetSelection(
+                subnet_type=SubnetType.PUBLIC
+            ),
+        )
 
 
 neptune_stack = NeptuneStack(

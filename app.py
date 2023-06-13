@@ -44,6 +44,9 @@ class NeptuneStack(Stack):
 
         cluster.connections.allow_default_port_from_any_ipv4("Open to the world")
 
+        write_address = cluster.cluster_endpoint.socket_address
+        read_address = cluster.cluster_read_endpoint.socket_address
+
 
 neptune_stack = NeptuneStack(
     app,

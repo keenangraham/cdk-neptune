@@ -59,6 +59,11 @@ class NeptuneStack(Stack):
             ),
         )
 
+        CfnOutput(
+            self,
+            'NeptuneWriteEndpoint',
+            value=write_address,
+        )
 
 neptune_stack = NeptuneStack(
     app,

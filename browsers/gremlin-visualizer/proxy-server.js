@@ -5,6 +5,8 @@ const cors = require('cors');
 const app = express();
 const port = 3001;
 
+process.env.DANGEROUSLY_DISABLE_HOST_CHECK = true;
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 app.use(cors({
@@ -53,9 +55,14 @@ function makeQuery(query, nodeLimit) {
 }
 
 
+app.get('/server/hello', (req, res, next) => {
+    console.log('home')
+    res.send('ok');
+});
 
-app.post('/query', (req, res, next) => {
-    const neptuneEndpoint = process.env.NEPTUNE_ENDPOINT;
+
+app.post('/server/query', (req, res, next) => {
+  const neptuneEndpoint = process.env.NEPTUNE_ENDPOINT;
 //  const gremlinHost = req.body.host;
 //  const gremlinPort = req.body.port;
   const nodeLimit = req.body.nodeLimit;

@@ -59,7 +59,7 @@ class Details extends React.Component {
   onTraverse(nodeId, direction) {
     const query = `g.V('${nodeId}').${direction}()`;
     axios.post(
-      QUERY_ENDPOINT,
+	QUERY_ENDPOINT,
       { host: this.props.host, port: this.props.port, query: query, nodeLimit: this.props.nodeLimit },
       { headers: { 'Content-Type': 'application/json' } }
     ).then((response) => {

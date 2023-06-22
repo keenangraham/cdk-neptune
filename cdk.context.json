@@ -36,5 +36,9 @@
         ]
       }
     ]
+  },
+  "hosted-zone:account=618537831167:domainName=api.encodedcc.org:region=us-west-2": {
+    "Id": "/hostedzone/Z100726339CN2ETJI2S55",
+    "Name": "api.encodedcc.org."
   }
 }

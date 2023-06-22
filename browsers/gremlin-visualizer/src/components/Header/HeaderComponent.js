@@ -14,7 +14,7 @@ class Header extends React.Component {
   sendQuery() {
     this.props.dispatch({ type: ACTIONS.SET_ERROR, payload: null });
     axios.post(
-      QUERY_ENDPOINT,
+	QUERY_ENDPOINT,
       { host: this.props.host, port: this.props.port, query: this.props.query, nodeLimit: this.props.nodeLimit },
       { headers: { 'Content-Type': 'application/json' } }
     ).then((response) => {

@@ -1,3 +1,5 @@
+import os
+
 import requests
 
 from rdf2g import setup_graph
@@ -50,14 +52,15 @@ def link_nodes(node1, node2, edge_name, g):
 
 
 def load_node(d, g):
-    make_node(d['@id'], d['@type'][0], g)
+    return make_node(d['@id'], d['@type'][0], g)
 
 
-def handle_attachment(vv, d, terms, g):
+def handle_attachment(node1, vv, d, terms, g):
     print('Found attachment, making new node')
     vv['@type'] = ['Attachment']
     vv['@id'] = vv['md5sum']
     attachment_node = load_node(vv, g)
+    link_nodes(node1, attachment_node, 'attachment', g)
     load_properties(vv, terms, g)
 
 
@@ -91,7 +94,7 @@ def load_properties(d, terms, g):
             for vv in v:
                 if isinstance(vv, dict):
                     if k == 'attachment':
-                        handle_attachment(vv, d, terms, g)
+                        handle_attachment(node1, vv, d, terms, g)
                         continue
                     if k == 'locations':
                         handle_gene_location(node1, vv, g)
@@ -118,3 +121,28 @@ def get_terms():
 def get_data(url='https://api.data.igvf.org/search/?type=Item&frame=object&limit=all', auth=None):
     r = requests.get(url, auth=auth)
     return r.json()['@graph']
+
+
+def clear_graph_except_genes(g):
+    from gremlin_python.process.graph_traversal import __
+    g.V().not_(__.hasLabel('Gene')).drop().iterate()
+
+
+def quick_load():
+    g = get_g(f'wss://{os.environ[NEPTUNE_ENDPOINT]}:8182/gremlin')
+    url = 'https://api.data.igvf.org/search/?type=Item&type!=Gene&frame=object&limit=all'
+    auth = (os.environ['IGVF_API_KEY'], os.environ['IGVF_API_SECRET'])
+    data = get_data(url, auth)
+    terms = get_terms()
+    clear_graph_except_genes(g)
+    load_data(data, terms, g)
+
+
+def full_load():
+    g = get_g(f'wss://{os.environ[NEPTUNE_ENDPOINT]}:8182/gremlin')
+    url = 'https://api.data.igvf.org/search/?type=Item&frame=object&limit=all'
+    auth = (os.environ['IGVF_API_KEY'], os.environ['IGVF_API_SECRET'])
+    data = get_data(url, auth)
+    terms = get_terms()
+    clear_graph(g)
+    load_data(data, terms, g)

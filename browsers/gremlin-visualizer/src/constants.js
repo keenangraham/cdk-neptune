@@ -1,5 +1,5 @@
 
-const SERVER_URL = 'https://graphviz.api.encodedcc.org/server';
+const SERVER_URL = 'https://graphviz.demo.igvf.org/server';
 export const QUERY_ENDPOINT = `${SERVER_URL}/query`;
 
 export const COMMON_GREMLIN_ERROR = 'Invalid query. Please execute a query to get a set of vertices';

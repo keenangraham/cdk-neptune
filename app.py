@@ -41,8 +41,7 @@ from aws_cdk.aws_secretsmanager import Secret
 
 from constructs import Construct
 
-from shared_infrastructure.igvf_dev.environments import US_WEST_2
-
+from shared_infrastructure.igvf_dev.environment import US_WEST_2
 from shared_infrastructure.igvf_dev.network import DemoNetwork
 from shared_infrastructure.igvf_dev.domain import DemoDomain
 

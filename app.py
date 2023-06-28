@@ -41,9 +41,10 @@ from aws_cdk.aws_secretsmanager import Secret
 
 from constructs import Construct
 
-from shared_infrastructure.cherry_lab.environments import US_WEST_2
+from shared_infrastructure.igvf_dev.environments import US_WEST_2
 
-from shared_infrastructure.cherry_lab.vpcs import VPCs
+from shared_infrastructure.igvf_dev.network import DemoNetwork
+from shared_infrastructure.igvf_dev.domain import DemoDomain
 
 
 app = App()
@@ -54,15 +55,20 @@ class NeptuneStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        vpcs = VPCs(
+        network = DemoNetwork(
             self,
-            'VPCS',
+            'DemoNetork',
+        )
+
+        domain = DemoDomain(
+            self,
+            'DemoDomain',
         )
 
         cluster = DatabaseCluster(
             self,
             'Neptune',
-            vpc=vpcs.default_vpc,
+            vpc=network.vpc,
             instance_type=InstanceType.T3_MEDIUM,
             vpc_subnets=SubnetSelection(
                 subnet_type=SubnetType.PUBLIC,
@@ -70,32 +76,22 @@ class NeptuneStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
-        cluster.connections.allow_default_port_from_any_ipv4("Open to the world")
+        cluster.connections.allow_default_port_from_any_ipv4('Open to the world')
 
         write_address = cluster.cluster_endpoint.socket_address
         read_address = cluster.cluster_read_endpoint.socket_address
 
+        '''
         bastion_host = BastionHostLinux(
             self,
             'NeptuneBastionHost',
             instance_type=Ec2InstanceType('t3.nano'),
-            vpc=vpcs.default_vpc,
+            vpc=network.vpc,
             subnet_selection=SubnetSelection(
                 subnet_type=SubnetType.PUBLIC
             ),
         )
-
-        certificate = Certificate.from_certificate_arn(
-            self,
-            'DomainCertificate',
-            'arn:aws:acm:us-west-2:618537831167:certificate/f2819fbb-0067-427e-b6a1-8a7b00362436',
-        )
-
-        hosted_zone = HostedZone.from_lookup(
-            self,
-            'HostedZone',
-            domain_name='api.encodedcc.org',
-        )
+        '''
         
         docker_image = ContainerImage.from_asset(
             './browsers/gremlin-visualizer',
@@ -151,19 +147,19 @@ class NeptuneStack(Stack):
             self,
             'graphviz',
             service_name='graphviz',
-            vpc=vpcs.default_vpc,
+            vpc=network.vpc,
             desired_count=1,
             task_definition=task_definition,
             load_balancers=[
                 ApplicationLoadBalancerProps(
                     name="lb",
                     public_load_balancer=True,
-                    domain_name='graphviz.api.encodedcc.org',
-                    domain_zone=hosted_zone,
+                    domain_name='graphviz.demo.igvf.org',
+                    domain_zone=domain.zone,
                     listeners=[
                         ApplicationListenerProps(
-                            name="listener",
-                            certificate=certificate,
+                            name='listener',
+                            certificate=domain.certificate
                         )
                     ]
                 )
@@ -186,7 +182,7 @@ class NeptuneStack(Stack):
             'ServerTargetGroup',
             targets=[server_target],
             port=80,
-            vpc=vpcs.default_vpc,
+            vpc=network.vpc,
         )
 
         server_target_group.configure_health_check(
@@ -196,7 +192,7 @@ class NeptuneStack(Stack):
         auth0_secret = Secret.from_secret_complete_arn(
            self,
            'Auth0Secret',
-            secret_complete_arn='arn:aws:secretsmanager:us-west-2:618537831167:secret:test/auth0secret/graphviz-5CroJK',
+            secret_complete_arn='arn:aws:secretsmanager:us-west-2:109189702753:secret:graphviz/auth0secret-5s5lsK',
         )
 
         fargate.listeners[0].add_action(
@@ -232,7 +228,6 @@ class NeptuneStack(Stack):
             ],
             priority=10,
         )
-
 
         CfnOutput(
             self,

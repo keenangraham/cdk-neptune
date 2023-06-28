@@ -5,10 +5,17 @@ from rdf2g import setup_graph
 
 DEFAULT_LOCAL_CONNECTION_STRING = "ws://localhost:8182/gremlin"
 
-g = setup_graph(DEFAULT_LOCAL_CONNECTION_STRING)
+
+def get_g(endpoint=DEFAULT_LOCAL_CONNECTION_STRING):
+    return setup_graph(DEFAULT_LOCAL_CONNECTION_STRING)
 
 
 def is_link(k, terms):
+    if k in ['term_id', 'dbxrefs', 'treatment_term_id', 'url', 'downloaded_url', 'source_url']:
+        return False
+    if k not in terms['@context']:
+        print(f'{k} not found in terms context, not a link')
+        return False
     context = terms['@context'][k]
     result = '@type' in context and context['@type'] == '@id'
     return result
@@ -46,6 +53,24 @@ def load_node(d, g):
     make_node(d['@id'], d['@type'][0], g)
 
 
+def handle_attachment(vv, d, terms, g):
+    print('Found attachment, making new node')
+    vv['@type'] = ['Attachment']
+    vv['@id'] = vv['md5sum']
+    attachment_node = load_node(vv, g)
+    load_properties(vv, terms, g)
+
+
+def handle_gene_location(node1, vv, g):
+    assembly = vv['assembly']
+    start_key = f'start_{assembly}'
+    end_key = f'end_{assembly}'
+    chromosome_key = f'chromosome_{assembly}'
+    add_property(node1, start_key, vv['start'], g)
+    add_property(node1, end_key, vv['end'], g)
+    add_property(node1, chromosome_key, vv['chromosome'], g)
+
+
 def load_properties(d, terms, g):
     node1 = get_node(d['@id'], g)
     for k, v in d.items():
@@ -65,6 +90,15 @@ def load_properties(d, terms, g):
         else:
             for vv in v:
                 if isinstance(vv, dict):
+                    if k == 'attachment':
+                        handle_attachment(vv, d, terms, g)
+                        continue
+                    if k == 'locations':
+                        handle_gene_location(node1, vv, g)
+                        continue
+                    if k == 'layout':
+                        print('skipping page layout')
+                        continue
                     print('FOUND dict, skipping', k, vv)
                     continue
                 add_property(node1, k, vv, g)
@@ -81,5 +115,6 @@ def get_terms():
     return requests.get('https://api.data.igvf.org/terms/').json()
 
 
-def get_data():
-    return requests.get('https://api.data.igvf.org/search/?type=Item&frame=object&limit=all').json()['@graph']
+def get_data(url='https://api.data.igvf.org/search/?type=Item&frame=object&limit=all', auth=None):
+    r = requests.get(url, auth=auth)
+    return r.json()['@graph']

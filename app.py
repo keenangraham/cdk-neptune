@@ -18,7 +18,7 @@ from aws_cdk.aws_ecs import ContainerImage
 from aws_cdk.aws_ecs import DeploymentCircuitBreaker
 from aws_cdk.aws_ecs import LogDriver
 from aws_cdk.aws_ecs import PortMapping
-from aws_cdk.aws_ecs import Secret
+from aws_cdk.aws_ecs import Secret as ECSSecret
 from aws_cdk.aws_ecs import FargateTaskDefinition
 
 from aws_cdk.aws_ecs_patterns import ApplicationLoadBalancedFargateService
@@ -38,6 +38,12 @@ from aws_cdk.aws_certificatemanager import Certificate
 from aws_cdk.aws_route53 import HostedZone
 
 from aws_cdk.aws_secretsmanager import Secret
+
+from aws_cdk.aws_events import Rule
+from aws_cdk.aws_events import Schedule
+from aws_cdk.aws_events import EventPattern
+
+from aws_cdk.aws_events_targets import EcsTask
 
 from constructs import Construct
 
@@ -112,7 +118,7 @@ class NeptuneStack(Stack):
                     'NEPTUNE_ENDPOINT': write_address,
                     'NODE_ENV': 'production',
                     'DANGEROUSLY_DISABLE_HOST_CHECK': 'true',
-                    'SERVER_URL': 'https://graphviz.api.encodedcc.org/server'
+                    'SERVER_URL': 'https://graphviz.demo.igvf.org/server'
             },
             logging=LogDriver.aws_logs(
                 stream_prefix='client',
@@ -232,6 +238,94 @@ class NeptuneStack(Stack):
             self,
             'NeptuneWriteEndpoint',
             value=write_address,
+        )
+
+        load_data_docker_image = ContainerImage.from_asset(
+            './',
+            file='./docker/python/Dockerfile'
+        )
+
+        load_data_task_definition = FargateTaskDefinition(
+            self,
+            'LoadDataTask',
+            cpu=1024,
+            memory_limit_mib=3072,
+            task_role=fargate.task_definition.task_role,
+        )
+
+        igvfd_secret = Secret.from_secret_complete_arn(
+           self,
+           'IGVFDSecret',
+            secret_complete_arn='arn:aws:secretsmanager:us-west-2:109189702753:secret:indexing-service-portal-key-BdNl8x',
+        )
+
+        load_data_task_definition.add_container(
+            'load-data',
+            container_name='load-data',
+            image=load_data_docker_image,
+            environment={
+                'NEPTUNE_ENDPOINT': write_address,
+            },
+            secrets={
+                'IGVF_API_KEY': ECSSecret.from_secrets_manager(
+                    igvfd_secret,
+                    'BACKEND_KEY',
+                ),
+                'IGVF_API_SECRET': ECSSecret.from_secrets_manager(
+                    igvfd_secret,
+                    'BACKEND_SECRET_KEY',
+                ),
+            },
+            logging=LogDriver.aws_logs(
+                stream_prefix='load-data',
+                mode=AwsLogDriverMode.NON_BLOCKING,
+            ),
+        )
+
+        event_target = EcsTask(
+            task_definition=load_data_task_definition,
+            cluster=fargate.cluster,
+            task_count=1,
+            subnet_selection=SubnetSelection(
+                subnet_type=SubnetType.PUBLIC
+            ),
+        )
+
+        Rule(
+            self,
+            'LoadGraphData',
+            schedule=Schedule.cron(
+                minute='30',
+                hour='10',
+            ),
+            targets=[
+                event_target
+            ],
+        )
+
+        Rule(
+            self,
+            'LoadGraphDataEvent',
+            event_pattern=EventPattern(
+                detail_type=[
+                    'LoadGraphData'
+                ],
+                source=[
+                    'graphviz',
+                ],
+            ),
+            targets=[
+                event_target
+            ]
+        )
+
+        full_reload_event_target = EcsTask(
+            task_definition=load_data_task_definition,
+            cluster=fargate.cluster,
+            task_count=1,
+            subnet_selection=SubnetSelection(
+                subnet_type=SubnetType.PUBLIC
+            ),
         )
 
 

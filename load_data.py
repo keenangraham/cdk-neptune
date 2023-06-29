@@ -1,15 +1,17 @@
 import os
 
-import requests
+import sys
 
-from rdf2g import setup_graph
+#import requests
+
+#from rdf2g import setup_graph
 
 
 DEFAULT_LOCAL_CONNECTION_STRING = "ws://localhost:8182/gremlin"
 
 
 def get_g(endpoint=DEFAULT_LOCAL_CONNECTION_STRING):
-    return setup_graph(DEFAULT_LOCAL_CONNECTION_STRING)
+    return setup_graph(endpoint)
 
 
 def is_link(k, terms):
@@ -129,20 +131,39 @@ def clear_graph_except_genes(g):
 
 
 def quick_load():
-    g = get_g(f'wss://{os.environ[NEPTUNE_ENDPOINT]}:8182/gremlin')
+    print('Connectiong to endpoint')
+    g = get_g(f'wss://{os.environ["NEPTUNE_ENDPOINT"]}/gremlin')
     url = 'https://api.data.igvf.org/search/?type=Item&type!=Gene&frame=object&limit=all'
     auth = (os.environ['IGVF_API_KEY'], os.environ['IGVF_API_SECRET'])
+    print('Getting data', url)
     data = get_data(url, auth)
+    print(len(data))
+    print('Getting terms')
     terms = get_terms()
+    print('Clearing graph except Genes')
     clear_graph_except_genes(g)
+    print('Loading data')
     load_data(data, terms, g)
 
 
 def full_load():
-    g = get_g(f'wss://{os.environ[NEPTUNE_ENDPOINT]}:8182/gremlin')
+    print('Connectiong to endpoint')
+    g = get_g(f'wss://{os.environ["NEPTUNE_ENDPOINT"]}/gremlin')
     url = 'https://api.data.igvf.org/search/?type=Item&frame=object&limit=all'
     auth = (os.environ['IGVF_API_KEY'], os.environ['IGVF_API_SECRET'])
+    print('Getting data')
     data = get_data(url, auth)
+    print(len(data))
+    print('Getting terms')
     terms = get_terms()
+    print('Clear graph')
     clear_graph(g)
+    print('Loading data')
     load_data(data, terms, g)
+
+
+if __name__ == '__main__':
+    if 'full' in sys.argv:
+        full_load()
+    else:
+        quick_load()

@@ -306,7 +306,7 @@ class NeptuneStack(Stack):
 
         Rule(
             self,
-            'LoadGraphDataEvent',
+            'LoadGraphDataEventQUICK',
             event_pattern=EventPattern(
                 detail_type=[
                     'LoadGraphDataQUICK'
@@ -337,7 +337,7 @@ class NeptuneStack(Stack):
 
         Rule(
             self,
-            'LoadGraphDataEvent',
+            'LoadGraphDataEventFULL',
             event_pattern=EventPattern(
                 detail_type=[
                     'LoadGraphDataFULL'

@@ -44,6 +44,7 @@ from aws_cdk.aws_events import Schedule
 from aws_cdk.aws_events import EventPattern
 
 from aws_cdk.aws_events_targets import EcsTask
+from aws_cdk.aws_events_targets import ContainerOverride
 
 from constructs import Construct
 
@@ -308,7 +309,7 @@ class NeptuneStack(Stack):
             'LoadGraphDataEvent',
             event_pattern=EventPattern(
                 detail_type=[
-                    'LoadGraphData'
+                    'LoadGraphDataQUICK'
                 ],
                 source=[
                     'graphviz',
@@ -326,6 +327,28 @@ class NeptuneStack(Stack):
             subnet_selection=SubnetSelection(
                 subnet_type=SubnetType.PUBLIC
             ),
+            container_overrides=[
+                ContainerOverride(
+                    container_name='load-data',
+                    command=['python', 'load_data.py', 'full'],
+                )
+            ]
+        )
+
+        Rule(
+            self,
+            'LoadGraphDataEvent',
+            event_pattern=EventPattern(
+                detail_type=[
+                    'LoadGraphDataFULL'
+                ],
+                source=[
+                    'graphviz',
+                ],
+            ),
+            targets=[
+                full_reload_event_target
+            ]
         )
 
 

@@ -2,9 +2,9 @@ import os
 
 import sys
 
-#import requests
+import requests
 
-#from rdf2g import setup_graph
+from rdf2g import setup_graph
 
 
 DEFAULT_LOCAL_CONNECTION_STRING = "ws://localhost:8182/gremlin"
